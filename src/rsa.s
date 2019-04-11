@@ -12,14 +12,18 @@
           Data section
 */
 .data
-     .balign 8
-     fname: .asciz "/home/mikepi/rsa/keys"
-     after_fname:
-     .set size_of_fname, after_fname - fname
 
-     .balign 8
-     p: .quad 0
+     pfname: .asciz "/home/mikepi/rsa/pfile"
+     qfname: .asciz "/home/mikepi/rsa/qfile"
 
+     .balign 16
+     p: .octa 0 //variable p
+
+     .balign 16
+     q: .octa 0 //variable q
+
+     .balign 16
+     n: .octa 0 //variable n
 /*
           Code section
 */
@@ -36,18 +40,40 @@ main:
      //openat call
      //syscall's arguments
      mov x0, -100
-     ldr x1, fname_addr
+     ldr x1, pfname_addr
      mov x2, 2
      mov x8, 56 //syscall #
      svc #0
      mov x10, x0
 
      ldr x1, p_addr
-     mov x2, 8
+     mov x2, 16
      mov x8, 63
      svc #0
-
      ldr x1, [x1]
+
+     mov x0, x10
+     mov x8, 57 //syscall #
+     svc #0
+
+     //openat call
+     //syscall's arguments
+     mov x0, -100
+     ldr x1, qfname_addr
+     mov x2, 2
+     mov x8, 56 //syscall #
+     svc #0
+     mov x10, x0
+
+     ldr x1, q_addr
+     mov x2, 16
+     mov x8, 63
+     svc #0
+     ldr x1, [x1]
+
+     mov x0, x10
+     mov x8, 57 //syscall #
+     svc #0
 /*
      ldr x1, value_addr
      mov x2, 4
@@ -55,20 +81,21 @@ main:
      svc #0
 */
 
-     mov x0, x10
-
      mov	w0, 0
-     mov x8, 57 //syscall #
-     svc #0
-
      ldp	x29, x30, [sp], 16
      ret
 
 //refereces to variables in code section
-fname_addr:
-     .quad fname
+pfname_addr:
+     .quad pfname
+qfname_addr:
+     .quad qfname
 p_addr:
      .quad p
+q_addr:
+     .quad q
+n_addr:
+     .quad n
 
 .size	main, .-main
 .ident	"GCC: (Ubuntu/Linaro 7.3.0-27ubuntu1~18.04) 7.3.0"
