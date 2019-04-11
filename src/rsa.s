@@ -17,8 +17,8 @@
      after_fname:
      .set size_of_fname, after_fname - fname
 
-     .balign 4
-     value: .word 4
+     .balign 8
+     p: .quad 0
 
 /*
           Code section
@@ -42,14 +42,20 @@ main:
      svc #0
      mov x10, x0
 
+     ldr x1, p_addr
+     mov x2, 8
+     mov x8, 63
+     svc #0
+
+     ldr x1, [x1]
+/*
      ldr x1, value_addr
      mov x2, 4
      mov x8, 64 //syscall #
      svc #0
+*/
 
      mov x0, x10
-     mov x8, 64 //syscall #
-
 
      mov	w0, 0
      mov x8, 57 //syscall #
@@ -61,8 +67,8 @@ main:
 //refereces to variables in code section
 fname_addr:
      .quad fname
-value_addr:
-     .quad value
+p_addr:
+     .quad p
 
 .size	main, .-main
 .ident	"GCC: (Ubuntu/Linaro 7.3.0-27ubuntu1~18.04) 7.3.0"
