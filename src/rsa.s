@@ -50,7 +50,6 @@ main:
      mov x2, 16
      mov x8, 63
      svc #0
-     ldr x1, [x1]
 
      mov x0, x10
      mov x8, 57 //syscall #
@@ -69,17 +68,23 @@ main:
      mov x2, 16
      mov x8, 63
      svc #0
-     ldr x1, [x1]
 
      mov x0, x10
      mov x8, 57 //syscall #
      svc #0
-/*
-     ldr x1, value_addr
-     mov x2, 4
-     mov x8, 64 //syscall #
-     svc #0
-*/
+
+     ldr x8, p_addr
+     ldr x9, q_addr
+     ldp	x2, x3, [x8]
+	ldp	x0, x1, [x9]
+	mul	x7, x2, x0
+	umulh x4, x2, x0
+	madd	x4, x3, x0, x4
+	madd	x4, x2, x1, x4
+	mov	x5, x7
+	mov	x6, x4
+     ldr x8, q_addr
+	stp	x5, x6, [x8]
 
      mov	w0, 0
      ldp	x29, x30, [sp], 16
