@@ -1,3 +1,4 @@
 bin/
 tests/
 src/copy.sh
+.vscode/
