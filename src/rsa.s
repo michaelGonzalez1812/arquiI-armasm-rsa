@@ -97,12 +97,141 @@ phi_method:
 	add	sp, sp, 32
 	ret
 	.size	phi_method, .-phi_method
+
+	
+	.align	2
+	.global	mcd
+	.type	mcd, %function
+
+
+/*-------------------------------
+	mcd method
+
+	Description: Compute the maximum
+	     common divisor between two numbers
+
+     note: Need less cycles if num1 is less
+          than num2
+
+	128 bits arguments
+	-num1 x0 x1
+	-num2 x2 x3
+	return x0 x1 128bits number
+---------------------------------*/
+mcd:
+	stp	x29, x30, [sp, -128]!
+	add	x29, sp, 0
+	stp	x19, x20, [sp, 16]
+	stp	x21, x22, [sp, 32]
+
+	stp	x0, x1, [x29, 64] //num1
+	stp	x2, x3, [x29, 48] //num2
+	
+	//result = 1
+	mov	x0, 1
+	mov	x1, 0
+	stp	x0, x1, [x29, 80] //result
+	//divisor = 2
+	mov	x0, 2
+	mov	x1, 0
+	stp	x0, x1, [x29, 96] //divisor
+
+	ldr	x1, [x29, 72] //MSB num1
+	ldr	x0, [x29, 56] //MSB num2
+	cmp	x1, x0
+	bgt	swap //greater than
+
+	cmp	x1, x0
+	bne	do //not equal
+
+	ldr	x1, [x29, 64]
+	ldr	x0, [x29, 48]
+	cmp	x1, x0
+	bls	do //less than or equal to
+
+swap:
+	ldp	x0, x1, [x29, 48]
+	stp	x0, x1, [x29, 112]
+	ldp	x0, x1, [x29, 64]
+	stp	x0, x1, [x29, 48]
+	ldp	x0, x1, [x29, 112]
+	stp	x0, x1, [x29, 64]
+
+do:
+	ldp	x0, x1, [x29, 64] //load num1
+	ldp	x2, x3, [x29, 96] //load divisor
+	bl	__modti3
+
+	orr	x0, x0, x1
+	cmp	x0, 0
+	bne	plusdivisor
+
+	ldp	x0, x1, [x29, 48] //load num2
+	ldp	x2, x3, [x29, 96] //load divisor
+	bl	__modti3
+
+	orr	x0, x0, x1
+	cmp	x0, 0
+	bne	plusdivisor
+
+	ldp	x2, x3, [x29, 80] //load result
+	ldp	x0, x1, [x29, 96] //load divior
+	mul	x5, x2, x0
+	umulh	x4, x2, x0
+	madd	x4, x3, x0, x4
+	madd	x4, x2, x1, x4
+	
+	stp	x5, x4, [x29, 80] //store result
+
+	ldp	x2, x3, [x29, 96] //load divisor
+	ldp	x0, x1, [x29, 64] //load num1
+	bl	__divti3
+	stp	x0, x1, [x29, 64] //store num1
+	
+	ldp	x2, x3, [x29, 96] //load divisor
+	ldp	x0, x1, [x29, 48] //load num2
+	bl	__divti3
+	stp	x0, x1, [x29, 48] //store num2
+
+	mov	x0, 2
+	mov	x1, 0
+	stp	x0, x1, [x29, 96] //reset divisor
+	b	while
+
+plusdivisor:
+	ldp	x2, x3, [x29, 96] //load divisor
+	mov	x0, 1
+	mov	x1, 0
+	adds	x4, x2, x0
+	adc	x0, x3, x1
+	stp	x4, x0, [x29, 96]
+
+while:
+	ldr	x1, [x29, 104] //load MSB divisor
+	ldr	x0, [x29, 72]  //load MSB num1
+	cmp	x1, x0
+	bgt	return_mcd //greather than
+	cmp	x1, x0
+	bne	do //not equal
+	ldr	x1, [x29, 96] //load LSB divisor
+	ldr	x0, [x29, 64] //load LSB num1
+	cmp	x1, x0
+	bhi	return_mcd
+	b	do
+
+return_mcd:
+	ldp	x0, x1, [x29, 80] //ld result
+	ldp	x19, x20, [sp, 16]
+	ldp	x21, x22, [sp, 32]
+	ldp	x29, x30, [sp], 128
+	ret
+	.size	mcd, .-mcd
+
+
 	.align	2
 	.global	main
 	.type	main, %function
-
 main:
-
      stp	x29, x30, [sp, -16]!
      add	x29, sp, 0
 
@@ -160,6 +289,8 @@ main:
      ldr x8, phi_addr
 	stp	x0, x1, [x8]
 
+     
+     
      mov	w0, 0
      ldp	x29, x30, [sp], 16
      ret
