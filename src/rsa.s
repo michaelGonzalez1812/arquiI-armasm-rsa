@@ -33,9 +33,6 @@
  *        Code section        *
  ******************************/
 .text
-     .align	2
-     .global	main
-     .type	main, %function
 
 /*-------------------------------
      Multiplication method
@@ -44,6 +41,9 @@
      -soruce2 x3 x4
      return x0 x1 128bits number
 ---------------------------------*/
+     .align	2
+     .global	mul
+     .type	mul, %function
 mul:
      mul	 x7, x2, x0
 	umulh x4, x2, x0
@@ -52,11 +52,7 @@ mul:
 	mov	 x0, x7
 	mov	 x1, x4
      ret
-
 	.size	mul, .-mul
-	.align	2
-	.global	main
-	.type	main, %function
 
 /*-------------------------------
      phi computation method
@@ -65,6 +61,9 @@ mul:
      -q x0 x1
      return x0 x1 128bits number
 ---------------------------------*/
+     .align	2
+	.global	phi_method
+	.type	phi_method, %function
 phi_method:
      sub	sp, sp, #32
 	stp	x0, x1, [sp, 16]
@@ -99,11 +98,6 @@ phi_method:
 	.size	phi_method, .-phi_method
 
 	
-	.align	2
-	.global	mcd
-	.type	mcd, %function
-
-
 /*-------------------------------
 	mcd method
 
@@ -118,6 +112,9 @@ phi_method:
 	-num2 x2 x3
 	return x0 x1 128bits number
 ---------------------------------*/
+     .align	2
+	.global	mcd
+	.type	mcd, %function
 mcd:
 	stp	x29, x30, [sp, -128]!
 	add	x29, sp, 0
@@ -142,12 +139,12 @@ mcd:
 	bgt	swap //greater than
 
 	cmp	x1, x0
-	bne	do //not equal
+	bne	mcd_do //not equal
 
 	ldr	x1, [x29, 64]
 	ldr	x0, [x29, 48]
 	cmp	x1, x0
-	bls	do //less than or equal to
+	bls	mcd_do //less than or equal to
 
 swap:
 	ldp	x0, x1, [x29, 48]
@@ -157,7 +154,7 @@ swap:
 	ldp	x0, x1, [x29, 112]
 	stp	x0, x1, [x29, 64]
 
-do:
+mcd_do:
 	ldp	x0, x1, [x29, 64] //load num1
 	ldp	x2, x3, [x29, 96] //load divisor
 	bl	__modti3
@@ -212,12 +209,12 @@ while:
 	cmp	x1, x0
 	bgt	return_mcd //greather than
 	cmp	x1, x0
-	bne	do //not equal
+	bne	mcd_do //not equal
 	ldr	x1, [x29, 96] //load LSB divisor
 	ldr	x0, [x29, 64] //load LSB num1
 	cmp	x1, x0
 	bhi	return_mcd
-	b	do
+	b	mcd_do
 
 return_mcd:
 	ldp	x0, x1, [x29, 80] //ld result
@@ -226,6 +223,62 @@ return_mcd:
 	ldp	x29, x30, [sp], 128
 	ret
 	.size	mcd, .-mcd
+
+/*-------------------------------
+	publickey method
+
+	Description: Find the firs public key
+
+	128 bits arguments
+	-phi x0 x1
+	return x0 x1 128bits number
+---------------------------------*/
+     .align	2
+	.global	publickey
+	.type	publickey, %function
+publickey:
+	stp	x29, x30, [sp, -80]!
+	add	x29, sp, 0
+	stp	x19, x20, [sp, 16]
+	stp	x0, x1, [x29, 32] //Store phi
+	mov	x0, 1
+	mov	x1, 0
+	stp	x0, x1, [x29, 48] //Store key
+publickey_do:
+	ldp	x2, x3, [x29, 48]
+	mov	x0, 1
+	mov	x1, 0
+	adds	x4, x2, x0
+	adc	x0, x3, x1
+	stp	x4, x0, [x29, 48] //store key
+
+	ldp	x2, x3, [x29, 32] //Load phi
+	ldp	x0, x1, [x29, 48] //Load key
+	bl	mcd
+	stp	x0, x1, [x29, 64] //store mcd_result
+	cmp	x0, 1
+	bne	key_cmp_phi
+	ldr	x0, [x29, 72]
+	cmp	x0, 0
+	beq	return_publickey
+key_cmp_phi:
+	ldr	x1, [x29, 40] //load MSB phi
+	ldr	x0, [x29, 56] //load MSB key
+	cmp	x1, x0
+	bgt	publickey_do
+     
+	cmp	x1, x0
+	bne	return_publickey
+	ldr	x1, [x29, 32] //load LSB phi
+	ldr	x0, [x29, 48] //load MSB phi
+	cmp	x1, x0
+	bhi	publickey_do
+return_publickey:
+	ldp	x0, x1, [x29, 48]
+	ldp	x19, x20, [sp, 16]
+	ldp	x29, x30, [sp], 80
+	ret
+	.size	publickey, .-publickey
 
 
 	.align	2
@@ -240,7 +293,7 @@ main:
      mov x0, -100
      ldr x1, pfname_addr
      mov x2, 2
-     mov x8, 56 //syscall __NR_openat
+     mov x8, 56 //syscall x1__NR_openat
      svc #0
      mov x10, x0
 
@@ -289,7 +342,7 @@ main:
      ldr x8, phi_addr
 	stp	x0, x1, [x8]
 
-     
+     bl publickey
      
      mov	w0, 0
      ldp	x29, x30, [sp], 16
