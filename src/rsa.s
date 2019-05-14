@@ -13,8 +13,9 @@
  ******************************/
 .data
 
-     pfname: .asciz "/home/mikepi/rsa/pfile"
-     qfname: .asciz "/home/mikepi/rsa/qfile"
+     pfname:   .asciz "/home/mikepi/rsa/pfile"
+     qfname:   .asciz "/home/mikepi/rsa/qfile"
+     msgfname: .asciz "/home/mikepi/rsa/msgfile"
 
      .balign 16
      p: .octa 0 //variable p
@@ -28,7 +29,11 @@
      .balign 16
      phi: .octa 0 //variable phi
 
+	.balign 16
+     private_key: .octa 0
 
+	.balign 16
+     public_key: .octa 0
 /******************************
  *        Code section        *
  ******************************/
@@ -227,7 +232,7 @@ return_mcd:
 /*-------------------------------
 	publickey method
 
-	Description: Find the firs public key
+	Description: Find the first public key
 
 	128 bits arguments
 	-phi x0 x1
@@ -266,7 +271,7 @@ key_cmp_phi:
 	ldr	x0, [x29, 56] //load MSB key
 	cmp	x1, x0
 	bgt	publickey_do
-     
+
 	cmp	x1, x0
 	bne	return_publickey
 	ldr	x1, [x29, 32] //load LSB phi
@@ -279,6 +284,60 @@ return_publickey:
 	ldp	x29, x30, [sp], 80
 	ret
 	.size	publickey, .-publickey
+
+/*-------------------------------
+	privatekey method
+
+	Description: Find the first private key
+
+	128 bits arguments
+	-phi x0 x1
+	-public_key x2 x3
+	return x0 x1 128bits number
+---------------------------------*/
+	.align	2
+	.global	privatekey
+	.type	privatekey, %function
+privatekey:
+	stp	x29, x30, [sp, -112]!
+	add	x29, sp, 0
+	stp	x19, x20, [sp, 16]
+	stp	x21, x22, [sp, 32]
+	stp	x0, x1, [x29, 64] //store phi
+	stp	x2, x3, [x29, 48] //store public_key
+	stp	xzr, xzr, [x29, 80] //store key
+	stp	xzr, xzr, [x29, 96] //store mod
+privatekey_do:
+	ldp	x2, x3, [x29, 80] //load key
+	mov	x0, 1
+	mov	x1, 0
+	//key + 1
+	adds	x4, x2, x0
+	adc	x0, x3, x1
+	stp	x4, x0, [x29, 80] //store key
+	ldp	x2, x3, [x29, 80] //load key
+	ldp	x0, x1, [x29, 48] //load public_key
+	mul	x5, x2, x0
+	umulh	x4, x2, x0
+	madd	x4, x3, x0, x4
+	madd	x4, x2, x1, x4
+	ldp	x2, x3, [x29, 64] //load phi
+	mov	x0, x5
+	mov	x1, x4
+	bl	__modti3
+	stp	x0, x1, [x29, 96] //store mod
+	ldr	x0, [x29, 96] //load LSB mod
+	cmp	x0, 1
+	bne	privatekey_do //not equal
+	ldr	x0, [x29, 104] //load MSB mod
+	cmp	x0, 0
+	bne	privatekey_do
+	ldp	x0, x1, [x29, 80] //load key
+	ldp	x19, x20, [sp, 16]
+	ldp	x21, x22, [sp, 32]
+	ldp	x29, x30, [sp], 112
+	ret
+	.size	privatekey, .-privatekey
 
 
 	.align	2
@@ -343,18 +402,30 @@ main:
 	stp	x0, x1, [x8]
 
      bl publickey
-     
+	ldr x8, public_key_addr
+	stp	x0, x1, [x8]
+     mov x2, x0
+	mov x3, x1
+	ldr x8, phi_addr
+	ldp	x0, x1, [x8]
+	
+	bl privatekey
+	ldr x8, public_key_addr
+	stp x0, x1, [x8]
+
      mov	w0, 0
      ldp	x29, x30, [sp], 16
      ret
 
 /********************************************
- * refereces to variables in code section   *
+ * references to variables in code section   *
  ********************************************/
 pfname_addr:
      .quad pfname
 qfname_addr:
      .quad qfname
+msgfname_addr:
+     .quad msgfname
 p_addr:
      .quad p
 q_addr:
@@ -363,6 +434,10 @@ n_addr:
      .quad n
 phi_addr:
      .quad phi
+public_key_addr:
+     .quad public_key
+privates_key_addr:
+     .quad private_key
 
 .size	main, .-main
 .ident	"GCC: (Ubuntu/Linaro 7.3.0-27ubuntu1~18.04) 7.3.0"
