@@ -343,6 +343,16 @@ privatekey_do:
 	.size	privatekey, .-privatekey
 
 
+/*-------------------------------
+	exponent method
+
+	Description: Compute the exponent
+
+	128 bits arguments
+	-base x0 x1
+	-exponent x2 x3
+	return x0 x1 128bits number
+---------------------------------*/
 	.align	2
 	.global	exponent
 	.type	exponent, %function
