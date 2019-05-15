@@ -34,6 +34,9 @@
 
 	.balign 16
      public_key: .octa 0
+
+	.balign 16
+     msg: .octa 0
 /******************************
  *        Code section        *
  ******************************/
@@ -341,6 +344,57 @@ privatekey_do:
 
 
 	.align	2
+	.global	exponent
+	.type	exponent, %function
+exponent:
+	sub	sp, sp, #64
+	stp	x0, x1, [sp, 16] //store base
+	stp	x2, x3, [sp] //store exponent
+	/*ldp	x0, x1, [sp, 16]*/
+	stp	x0, x1, [sp, 32] //store result
+	mov	x0, 1
+	mov	x1, 0
+	stp	x0, x1, [sp, 48] //store i
+	b	exponent_for_condition
+exponent_for_body:
+	ldp	x2, x3, [sp, 32] //load result
+	ldp	x0, x1, [sp, 16] //load base
+	mul	x9, x2, x0
+	umulh	x4, x2, x0
+	madd	x4, x3, x0, x4
+	madd	x4, x2, x1, x4
+	/*mov	x5, x9
+	mov	x6, x4*/
+	stp	x9, x4, [sp, 32] //store result
+	ldp	x2, x3, [sp, 48] //load i
+	mov	x0, 1
+	mov	x1, 0
+	adds	x4, x2, x0
+	adc	x0, x3, x1
+	mov	x7, x4
+	mov	x8, x0
+	stp	x7, x8, [sp, 48] //store i
+exponent_for_condition:
+	ldr	x1, [sp, 8]
+	ldr	x0, [sp, 56]
+	cmp	x1, x0
+	bgt	exponent_for_body //greater than
+	/*ldr	x1, [sp, 8]
+	ldr	x0, [sp, 56]*/
+	cmp	x1, x0
+	bne	return_exponent
+	ldr	x1, [sp]
+	ldr	x0, [sp, 48]
+	cmp	x1, x0
+	bhi	exponent_for_body
+return_exponent:
+	ldp	x0, x1, [sp, 32]
+	add	sp, sp, 64
+	ret
+	.size	exponent, .-exponent
+
+
+	.align	2
 	.global	main
 	.type	main, %function
 main:
@@ -383,6 +437,24 @@ main:
      mov x8, 57 //syscall __NR_close
      svc #0
 
+	//openat call
+     //syscall's arguments
+     mov x0, -100
+     ldr x1, msgfname_addr
+     mov x2, 2
+     mov x8, 56 //syscall __NR_openat
+     svc #0
+     mov x10, x0
+
+     ldr x1, msg_addr
+     mov x2, 16
+     mov x8, 63 //__NR_read
+     svc #0
+
+     mov x0, x10
+     mov x8, 57 //syscall __NR_close
+     svc #0
+
      //compute and store n
      ldr x8, p_addr
      ldr x9, q_addr
@@ -410,7 +482,7 @@ main:
 	ldp	x0, x1, [x8]
 	
 	bl privatekey
-	ldr x8, public_key_addr
+	ldr x8, private_key_addr
 	stp x0, x1, [x8]
 
      mov	w0, 0
@@ -436,8 +508,10 @@ phi_addr:
      .quad phi
 public_key_addr:
      .quad public_key
-privates_key_addr:
+private_key_addr:
      .quad private_key
+msg_addr:
+     .quad msg
 
 .size	main, .-main
 .ident	"GCC: (Ubuntu/Linaro 7.3.0-27ubuntu1~18.04) 7.3.0"
