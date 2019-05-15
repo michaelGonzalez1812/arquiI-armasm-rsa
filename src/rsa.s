@@ -37,6 +37,9 @@
 
 	.balign 16
      msg: .octa 0
+
+	.balign 16
+     encrypt_msg: .octa 0
 /******************************
  *        Code section        *
  ******************************/
@@ -404,6 +407,36 @@ return_exponent:
 	.size	exponent, .-exponent
 
 
+/*-------------------------------
+	encrypt method
+
+	Description: encrypt a msg
+
+	128 bits arguments
+	-msg x0 x1
+	-public_key x2 x3
+	-n x4 x5
+	return x0 x1 128bits number
+---------------------------------*/
+	.align	2
+	.global	encrypt
+	.type	encrypt, %function
+encrypt:
+	stp	x29, x30, [sp, -64]!
+	add	x29, sp, 0
+	stp	x0, x1, [x29, 48] //store msg
+	stp	x2, x3, [x29, 32] //store public_key
+	stp	x4, x5, [x29, 16] //store n
+	ldp	x2, x3, [x29, 32]
+	ldp	x0, x1, [x29, 48]
+	bl	exponent
+	ldp	x2, x3, [x29, 16]
+	bl	__modti3
+	ldp	x29, x30, [sp], 64
+	ret
+	.size	encrypt, .-encrypt
+
+
 	.align	2
 	.global	main
 	.type	main, %function
@@ -495,6 +528,22 @@ main:
 	ldr x8, private_key_addr
 	stp x0, x1, [x8]
 
+	ldr x8, msg_addr
+	ldp x0, x1, [x8]
+	ldr x8, public_key_addr
+	ldp x2, x3, [x8]
+	ldr x8, n_addr
+	ldp x4, x5, [x8]
+	bl encrypt
+
+	/*ldr x8, msg_addr
+	ldp x0, x1, [x8]*/
+	ldr x8, private_key_addr
+	ldp x2, x3, [x8]
+	ldr x8, n_addr
+	ldp x4, x5, [x8]
+	bl encrypt
+
      mov	w0, 0
      ldp	x29, x30, [sp], 16
      ret
@@ -522,6 +571,8 @@ private_key_addr:
      .quad private_key
 msg_addr:
      .quad msg
+encrypt_msg_addr:
+     .quad encrypt_msg
 
 .size	main, .-main
 .ident	"GCC: (Ubuntu/Linaro 7.3.0-27ubuntu1~18.04) 7.3.0"
