@@ -2,3 +2,5 @@ bin/
 tests/
 src/copy.sh
 .vscode/
+performance-results/
+vs-workspace.code-workspace
