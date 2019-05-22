@@ -13,9 +13,14 @@
  ******************************/
 .data
 
-     pfname:   .asciz "/home/mikepi/rsa/pfile"
-     qfname:   .asciz "/home/mikepi/rsa/qfile"
-     msgfname: .asciz "/home/mikepi/rsa/msgfile"
+     pfname:   .asciz "/home/mikepi/rsa/iofiles/pfile"
+     qfname:   .asciz "/home/mikepi/rsa/iofiles/qfile"
+	nfname:   .asciz "/home/mikepi/rsa/iofiles/nfile"
+     msgfname: .asciz "/home/mikepi/rsa/iofiles/msgfile"
+	msgEncryptedfname: .asciz "/home/mikepi/rsa/iofiles/msgEncryptedfile"
+	msgDecryptedfname: .asciz "/home/mikepi/rsa/iofiles/msgDecryptedfile"
+	privateKfname: .asciz "/home/mikepi/rsa/iofiles/privateKfile"
+	publicKfname: .asciz "/home/mikepi/rsa/iofiles/publicKfile"
 
      .balign 16
      p: .octa 0 //variable p
@@ -39,7 +44,10 @@
      msg: .octa 0
 
 	.balign 16
-     encrypt_msg: .octa 0
+     encrypted_msg: .octa 0
+
+	.balign 16
+     decrypted_msg: .octa 0
 /******************************
  *        Code section        *
  ******************************/
@@ -535,6 +543,8 @@ main:
 	ldr x8, n_addr
 	ldp x4, x5, [x8]
 	bl encrypt
+	ldr x8, encrypted_msg_addr
+	stp x0, x0, [x8]
 
 	/*ldr x8, msg_addr
 	ldp x0, x1, [x8]*/
@@ -543,10 +553,127 @@ main:
 	ldr x8, n_addr
 	ldp x4, x5, [x8]
 	bl encrypt
+	ldr x8, decrypted_msg_addr
+	stp x0, x0, [x8]
+
+	//openat call
+     //syscall's arguments
+     mov x0, -100
+     ldr x1, publicKfname_addr
+     mov x2, 2
+     mov x8, 56 //syscall __NR_openat
+     svc #0
+     mov x10, x0
+	mov x3, x0
+
+	ldr x1, public_key_addr
+     mov x2, 16
+     mov x8, 64 //__NR_write
+     svc #0
+
+     mov x0, x10
+     mov x8, 57 //syscall __NR_close
+     svc #0
+
+	//openat call
+     //syscall's arguments
+     mov x0, -100
+     ldr x1, privateKfname_addr
+     mov x2, 2
+     mov x8, 56 //syscall __NR_openat
+     svc #0
+     mov x10, x0
+	mov x3, x0
+
+	ldr x1, private_key_addr
+     mov x2, 16
+     mov x8, 64 //__NR_write
+     svc #0
+
+     mov x0, x10
+     mov x8, 57 //syscall __NR_close
+     svc #0
+
+	//openat call
+     //syscall's arguments
+     mov x0, -100
+     ldr x1, nfname_addr
+     mov x2, 2
+     mov x8, 56 //syscall __NR_openat
+     svc #0
+     mov x10, x0
+	mov x3, x0
+
+	ldr x1, n_addr
+     mov x2, 16
+     mov x8, 64 //__NR_write
+     svc #0
+
+     mov x0, x10
+     mov x8, 57 //syscall __NR_close
+     svc #0
+
+	//openat call
+     //syscall's arguments
+     mov x0, -100
+     ldr x1, msgEncryptedfname_addr
+     mov x2, 2
+     mov x8, 56 //syscall __NR_openat
+     svc #0
+     mov x10, x0
+	mov x3, x0
+
+	ldr x1, encrypted_msg_addr
+     mov x2, 16
+     mov x8, 64 //__NR_write
+     svc #0
+
+     mov x0, x10
+     mov x8, 57 //syscall __NR_close
+     svc #0
+
+	//openat call
+     //syscall's arguments
+     mov x0, -100
+     ldr x1, msgDecryptedfname_addr
+     mov x2, 2
+     mov x8, 56 //syscall __NR_openat
+     svc #0
+     mov x10, x0
+	mov x3, x0
+
+	ldr x1, decrypted_msg_addr
+     mov x2, 16
+     mov x8, 64 //__NR_write
+     svc #0
+
+     mov x0, x10
+     mov x8, 57 //syscall __NR_close
+     svc #0
+
+	//openat call
+     //syscall's arguments
+     mov x0, -100
+     ldr x1, nfname_addr
+     mov x2, 2
+     mov x8, 56 //syscall __NR_openat
+     svc #0
+     mov x10, x0
+	mov x3, x0
+
+	ldr x1, n_addr
+     mov x2, 16
+     mov x8, 64 //__NR_write
+     svc #0
+
+     mov x0, x10
+     mov x8, 57 //syscall __NR_close
+     svc #0
 
      mov	w0, 0
      ldp	x29, x30, [sp], 16
      ret
+
 
 /********************************************
  * references to variables in code section   *
@@ -555,8 +682,18 @@ pfname_addr:
      .quad pfname
 qfname_addr:
      .quad qfname
+nfname_addr:
+     .quad nfname
 msgfname_addr:
      .quad msgfname
+msgEncryptedfname_addr:
+     .quad msgEncryptedfname
+msgDecryptedfname_addr:
+     .quad msgDecryptedfname
+privateKfname_addr:
+     .quad privateKfname
+publicKfname_addr:
+     .quad publicKfname
 p_addr:
      .quad p
 q_addr:
@@ -571,8 +708,10 @@ private_key_addr:
      .quad private_key
 msg_addr:
      .quad msg
-encrypt_msg_addr:
-     .quad encrypt_msg
+encrypted_msg_addr:
+     .quad encrypted_msg
+decrypted_msg_addr:
+     .quad decrypted_msg
 
 .size	main, .-main
 .ident	"GCC: (Ubuntu/Linaro 7.3.0-27ubuntu1~18.04) 7.3.0"
