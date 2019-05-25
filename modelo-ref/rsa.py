@@ -26,7 +26,7 @@ def main():
     C = (N**e) % n
     print("Numero encriptado =", C)
 
-    posiblePrivedKeys = filter(lambda x: (x*e) % phi == 1, range(1, 200))
+    posiblePrivedKeys = filter(lambda x: (x*e) % phi == 1, range(1, 2000))
     print("posibles claves privadas:  ", posiblePrivedKeys)
 
     for x in posiblePrivedKeys:

@@ -119,13 +119,10 @@ phi_method:
 	
 /*-------------------------------
 	mcd method
-
 	Description: Compute the maximum
 	     common divisor between two numbers
-
      note: Need less cycles if num1 is less
           than num2
-
 	128 bits arguments
 	-num1 x0 x1
 	-num2 x2 x3
@@ -176,9 +173,7 @@ swap:
 mcd_do:
 	ldp	x0, x1, [x29, 64] //load num1
 	ldp	x2, x3, [x29, 96] //load divisor
-	bl	division
-	mov  x0, x2
-	mov  x1, x3
+	bl	__modti3
 
 	orr	x0, x0, x1
 	cmp	x0, 0
@@ -186,9 +181,7 @@ mcd_do:
 
 	ldp	x0, x1, [x29, 48] //load num2
 	ldp	x2, x3, [x29, 96] //load divisor
-	bl	division
-	mov  x0, x2
-	mov  x1, x3
+	bl	__modti3
 
 	orr	x0, x0, x1
 	cmp	x0, 0
@@ -205,12 +198,12 @@ mcd_do:
 
 	ldp	x2, x3, [x29, 96] //load divisor
 	ldp	x0, x1, [x29, 64] //load num1
-	bl	division
+	bl	__divti3
 	stp	x0, x1, [x29, 64] //store num1
 	
 	ldp	x2, x3, [x29, 96] //load divisor
 	ldp	x0, x1, [x29, 48] //load num2
-	bl	division
+	bl	__divti3
 	stp	x0, x1, [x29, 48] //store num2
 
 	mov	x0, 2
@@ -249,9 +242,7 @@ return_mcd:
 
 /*-------------------------------
 	publickey method
-
 	Description: Find the first public key
-
 	128 bits arguments
 	-phi x0 x1
 	return x0 x1 128bits number
@@ -305,9 +296,7 @@ return_publickey:
 
 /*-------------------------------
 	privatekey method
-
 	Description: Find the first private key
-
 	128 bits arguments
 	-phi x0 x1
 	-public_key x2 x3
@@ -342,9 +331,7 @@ privatekey_do:
 	ldp	x2, x3, [x29, 64] //load phi
 	mov	x0, x5
 	mov	x1, x4
-	bl	division
-	mov  x0, x2
-	mov  x1, x3
+	bl	__modti3
 	stp	x0, x1, [x29, 96] //store mod
 	ldr	x0, [x29, 96] //load LSB mod
 	cmp	x0, 1
@@ -362,9 +349,7 @@ privatekey_do:
 
 /*-------------------------------
 	exponent method
-
 	Description: Compute the exponent
-
 	128 bits arguments
 	-base x0 x1
 	-exponent x2 x3
@@ -390,6 +375,8 @@ exponent_for_body:
 	umulh	x4, x2, x0
 	madd	x4, x3, x0, x4
 	madd	x4, x2, x1, x4
+	/*mov	x5, x9
+	mov	x6, x4*/
 	stp	x9, x4, [sp, 32] //store result
 	ldp	x2, x3, [sp, 48] //load i
 	mov	x0, 1
@@ -404,6 +391,8 @@ exponent_for_condition:
 	ldr	x0, [sp, 56]
 	cmp	x1, x0
 	bgt	exponent_for_body //greater than
+	/*ldr	x1, [sp, 8]
+	ldr	x0, [sp, 56]*/
 	cmp	x1, x0
 	bne	return_exponent
 	ldr	x1, [sp]
@@ -419,9 +408,7 @@ return_exponent:
 
 /*-------------------------------
 	encrypt method
-
 	Description: encrypt a msg
-
 	128 bits arguments
 	-msg x0 x1
 	-public_key x2 x3
@@ -441,62 +428,10 @@ encrypt:
 	ldp	x0, x1, [x29, 48]
 	bl	exponent
 	ldp	x2, x3, [x29, 16]
-	bl	division
-	mov  x0, x2
-	mov  x1, x3
+	bl	__modti3
 	ldp	x29, x30, [sp], 64
 	ret
 	.size	encrypt, .-encrypt
-
-
-/*-------------------------------
-	division method
-
-	128 bits arguments
-	-numerator x0 x1
-	-denominator x2 x3
-	return 
-		-x0 x1 quotient
-		-x2 x3 remainder
----------------------------------*/
-	.align	2
-	.global	division
-	.type	division, %function
-division:
-	sub	sp, sp, #48
-	stp	x0, x1, [sp, 16] //store numerator
-	stp	x2, x3, [sp] //store denominator
-	stp	xzr, xzr, [sp, 32] //store quotient
-	b	while_cond_division
-division_cycle_body:
-	ldp	x2, x3, [sp, 16] //load numerator
-	ldp	x0, x1, [sp] //load denominator
-	subs	x8, x2, x0
-	sbc	x0, x3, x1
-	stp	x8, x0, [sp, 16] //store numerator
-	ldp	x2, x3, [sp, 32] //load quotient
-	mov	x0, 1
-	mov	x1, 0
-	adds	x8, x2, x0
-	adc	x0, x3, x1
-	stp	x8, x0, [sp, 32] // store quotient
-while_cond_division:
-	ldr	x1, [sp, 8] //load MSB denominator
-	ldr	x0, [sp, 24] //load MSB numerator
-	cmp	x1, x0
-	bgt	division_return
-	cmp	x1, x0
-	bne	division_cycle_body
-	ldr	x1, [sp]
-	ldr	x0, [sp, 16]
-	cmp	x1, x0
-	bls	division_cycle_body
-division_return:
-	ldp	x0, x1, [sp, 32]
-	ldp	x2, x3, [sp, 16]
-	add	sp, sp, 48
-	ret
-	.size	division, .-division
 
 
 	.align	2
@@ -600,6 +535,8 @@ main:
 	ldr x8, encrypted_msg_addr
 	stp x0, x1, [x8]
 
+	/*ldr x8, msg_addr
+	ldp x0, x1, [x8]*/
 	ldr x8, private_key_addr
 	ldp x2, x3, [x8]
 	ldr x8, n_addr

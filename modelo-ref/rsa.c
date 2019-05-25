@@ -71,17 +71,22 @@ int main(void)
     __int128 p = 0;
     __int128 q = 0;
     __int128 msg = 0;
-    __int128 msgEncrypted;
-    __int128 msgDecrypted;
-    __int128 vphi;
-    __int128 vprivateKey;
-    __int128 vpublicKey;
-    __int128 n;
+    __int128 msgEncrypted = 0;
+    __int128 msgDecrypted = 0;
+    __int128 vphi = 0;
+    __int128 vprivateKey = 0;
+    __int128 vpublicKey = 0;
+    __int128 n = 0;
 
-    const char* pfileName = "/home/mikepi/rsa/pfile";
-    const char* qfileName = "/home/mikepi/rsa/qfile";
-    const char* msgfileName = "/home/mikepi/rsa/msgfile";
-    
+    const char* pfileName = "/home/mikepi/rsa/iofiles/pfile";
+    const char* qfileName = "/home/mikepi/rsa/iofiles/qfile";
+    const char* nfileName = "/home/mikepi/rsa/iofiles/nfile";
+	const char* msgfileName = "/home/mikepi/rsa/iofiles/msgfile";
+    const char* msgEncryptedfileName = "/home/mikepi/rsa/iofiles/msgEncryptedfile";
+	const char* msgDecryptedfileName = "/home/mikepi/rsa/iofiles/msgDecryptedfile";
+	const char* privateKfileName = "/home/mikepi/rsa/iofiles/privateKfile";
+	const char* publicKfileName = "/home/mikepi/rsa/iofiles/publicKfile";
+
     FILE* file;
     
     file = fopen(pfileName, "r");
@@ -103,5 +108,25 @@ int main(void)
     msgEncrypted = encrypt(msg, vpublicKey, n);
     msgDecrypted = encrypt(msgEncrypted, vprivateKey, n);
 
-    return vphi + vpublicKey + vprivateKey;
+    file = fopen(msgEncryptedfileName, "wb");
+    fwrite(&msgEncrypted, sizeof(__int128), 1, file);
+    fclose(file);
+
+    file = fopen(msgDecryptedfileName, "wb");
+    fwrite(&msgDecrypted, sizeof(__int128), 1, file);
+    fclose(file);
+
+    file = fopen(privateKfileName, "wb");
+    fwrite(&vprivateKey, sizeof(__int128), 1, file);
+    fclose(file);
+
+    file = fopen(publicKfileName, "wb");
+    fwrite(&vpublicKey, sizeof(__int128), 1, file);
+    fclose(file);
+
+    file = fopen(nfileName, "wb");
+    fwrite(&n, sizeof(__int128), 1, file);
+    fclose(file);
+
+    return 0;
 }
